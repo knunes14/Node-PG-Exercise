@@ -49,22 +49,32 @@ router.post('/invoices', async (req, res, next) => {
 //**PUT /invoices/[id] :** Updates an invoice. If invoice cannot be found, returns a 404.
 //Needs to be passed in a JSON body of `{amt}` Returns: `{invoice: {id, comp_code, amt, paid, add_date, paid_date}}`
 
-request.put('/invoices/:id', async (req, res, next) => {
+router.put('/invoices/:id', async (req, res, next) => {
     try {
+        const { amt, paid } = req.body;
+
+        let paidDate = null;
+        if (paid === true) {
+            paidDate = new Date(); // Set paid_date to current date if paid is true
+        }
+
         const result = await db.query(`
             UPDATE invoices
-            SET amt = $1
-            WHERE id = $2
+            SET amt = $1, paid = $2, paid_date = $3
+            WHERE id = $4
             RETURNING id, comp_code, amt, paid, add_date, paid_date
-        `, [req.body.amt, req.params.id]);
+        `, [amt, paid, paidDate, req.params.id]);
+
         if (result.rows.length === 0) {
             throw new ExpressError(`Invoice not found`, 404);
         }
-        return res.json({invoice: result.rows[0]});
+
+        return res.json({ invoice: result.rows[0] });
     } catch (e) {
         return next(e);
     }
-})
+});
+
 
 //**DELETE /invoices/[id] :** Deletes an invoice.If invoice cannot be found, returns a 404. Returns: `{status: "deleted"}` Also, one route from the previous part should be updated:
 

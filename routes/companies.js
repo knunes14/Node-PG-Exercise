@@ -1,4 +1,5 @@
 const express = require("express");
+const slugify = require("slugify");
 const ExpressError = require("../expressError")
 const router = express.Router();
 const db = require("../db");
@@ -33,17 +34,22 @@ router.get('/companies/:code', async (req, res, next) => {
 
 router.post('/companies', async (req, res, next) => {
     try {
+        // Generate company code using slugify
+        const code = slugify(req.body.name, { lower: true });
+        
         const result = await db.query(`
             INSERT INTO companies
             (code, name, description)
             VALUES ($1, $2, $3)
             RETURNING code, name, description
-        `, [req.body.code, req.body.name, req.body.description]);
-        return res.status(201).json({company: result.rows[0]});
+        `, [code, req.body.name, req.body.description]);
+        
+        return res.status(201).json({ company: result.rows[0] });
     } catch (e) {
         return next(e);
     }
-})
+});
+
 
 //**PUT /companies/[code] :** Edit existing company. Should return 404 if company cannot be found.
 //Needs to be given JSON like: `{name, description}` Returns update company object: `{company: {code, name, description}}`
